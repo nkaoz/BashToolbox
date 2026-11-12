@@ -7,10 +7,10 @@ set -euo pipefail
 # Compatible: macOS / Linux
 # ==========================================
 
-PREFIX="imagen"
+PREFIX="optimize"
 INPUT_DIR="."
 OUTPUT_DIR="./optimized"
-QUALITY="80"
+QUALITY="85"
 
 COMMAND_NAME="$(basename "$0")"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/imgopt"
@@ -57,15 +57,14 @@ ${COLOR_BOLD}Uso:${COLOR_RESET} ${COMMAND_NAME} [opciones]
 
 Convierte imágenes JPG, PNG, WebP y HEIC/HEIF a JPG o WebP optimizado.
 
-Al iniciar pregunta el formato de salida si no se usa --format.
-Si no hay respuesta en 10 segundos, usa JPG.
+Al ejecutarlo sin opciones usa: entrada ., prefijo optimize, formato jpg, calidad 85 y salida ./optimized.
 
 ${COLOR_BOLD}Opciones:${COLOR_RESET}
-  -p, --prefix TEXTO    Prefijo de los archivos de salida (defecto: imagen)
+  -p, --prefix TEXTO    Prefijo de los archivos de salida (defecto: optimize)
   -i, --input DIR       Carpeta con las imágenes (defecto: .)
   -o, --output DIR      Carpeta destino (defecto: ./optimized)
-  -q, --quality N       Calidad de 1 a 100 (defecto: 80)
-  -f, --format FORMATO  Formato de salida: jpg o webp (si se omite, pregunta)
+  -q, --quality N       Calidad de 1 a 100 (defecto: 85)
+  -f, --format FORMATO  Formato de salida: jpg o webp (defecto: jpg)
   -h, --help            Muestra esta ayuda
 
 ${COLOR_BOLD}Ejemplos:${COLOR_RESET}
@@ -99,39 +98,6 @@ etiqueta_nivel() {
     printf 'Moderada'
   else
     printf 'Baja'
-  fi
-}
-
-elegir_formato() {
-  local respuesta
-
-  # Sin terminal interactiva no se puede preguntar: JPG por defecto
-  [[ -t 0 ]] || return 0
-
-  printf '%sFormato de salida%s [JPG/WEBP] (JPG en 10s): ' \
-    "$COLOR_BOLD" "$COLOR_RESET"
-
-  if IFS= read -r -t 10 respuesta; then
-    respuesta="$(printf '%s' "$respuesta" | tr '[:upper:]' '[:lower:]')"
-
-    case "$respuesta" in
-      '' | jpg | jpeg)
-        FORMAT="jpg"
-        EXTENSION="jpg"
-        FORMAT_LABEL="JPG"
-        ;;
-      webp)
-        FORMAT="webp"
-        EXTENSION="webp"
-        FORMAT_LABEL="WEBP"
-        ;;
-      *)
-        printf '\n%sOpción no válida; se usará JPG.%s\n' \
-          "$COLOR_YELLOW" "$COLOR_RESET"
-        ;;
-    esac
-  else
-    printf '\n%sSin respuesta; se usará JPG.%s\n' "$COLOR_DIM" "$COLOR_RESET"
   fi
 }
 
@@ -191,11 +157,6 @@ detectar_soporte_heic() {
 # ------------------------------------------
 # Validaciones
 # ------------------------------------------
-
-if [[ $# -eq 0 ]]; then
-  usage
-  exit 0
-fi
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -284,10 +245,6 @@ fi
 
 [[ "$contador" =~ ^[0-9]+$ ]] ||
   error "Contador inválido"
-
-if [[ -z "$FORMAT_OPT" ]]; then
-  elegir_formato
-fi
 
 if [[ "$FORMAT" == "jpg" ]]; then
   command -v jpegoptim >/dev/null 2>&1 ||

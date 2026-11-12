@@ -8,22 +8,20 @@ Convierte archivos JPEG, PNG, WebP y HEIC/HEIF del directorio indicado a JPEG o 
 imgopt.sh [opciones]
 ```
 
-Ejecutar el comando sin opciones, o con `-h`/`--help`, muestra la ayuda.
+Sin opciones, el comando usa los valores por defecto: entrada `.`, prefijo `optimize`, formato `jpg`, calidad `85` y salida `./optimized`. Para ver la ayuda usa `-h` o `--help`.
 
 ## Opciones
 
-- `-p`, `--prefix TEXTO`: prefijo del nombre de salida; por defecto, `imagen`.
+- `-p`, `--prefix TEXTO`: prefijo del nombre de salida; por defecto, `optimize`.
 - `-i`, `--input DIR`: carpeta de imágenes; por defecto, el directorio actual.
 - `-o`, `--output DIR`: carpeta para los archivos generados; por defecto, `./optimized`.
-- `-q`, `--quality N`: calidad entre 1 y 100; por defecto, `80`.
-- `-f`, `--format FORMATO`: formato de salida, `jpg` o `webp`. Si se omite, el script lo pregunta.
+- `-q`, `--quality N`: calidad entre 1 y 100; por defecto, `85`.
+- `-f`, `--format FORMATO`: formato de salida, `jpg` o `webp`; por defecto, `jpg`.
 - `-h`, `--help`: muestra la ayuda.
 
 ## Formato de salida
 
-Si no se usa `--format`, el script pregunta si se desea generar **JPG** o **WEBP**. Si no hay respuesta en 10 segundos, usa JPG automáticamente.
-
-Cuando no hay una terminal interactiva (por ejemplo, al redirigir la salida), también se usa JPG sin preguntar.
+El formato por defecto es **JPG**. Usa `--format webp` para generar WebP.
 
 - **JPG**: se aplana la transparencia sobre fondo blanco y se optimiza con `jpegoptim`.
 - **WEBP**: se conserva la transparencia y se comprime con ImageMagick usando el método más lento y de mayor calidad.
