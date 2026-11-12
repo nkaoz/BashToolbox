@@ -13,6 +13,7 @@ OUTPUT_DIR="${3:-./optimized}"
 QUALITY="${4:-80}"
 
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/imgopt"
+HEIC_BACKEND=""
 
 # ------------------------------------------
 # Colores (solo si la salida es una terminal)
@@ -49,7 +50,7 @@ usage() {
   cat <<EOF
 ${COLOR_BOLD}Uso:${COLOR_RESET} imgopt.sh [prefijo] [directorio_entrada] [directorio_salida] [calidad]
 
-Convierte imágenes JPG, PNG y WebP a JPEG optimizado.
+Convierte imágenes JPG, PNG, WebP y HEIC/HEIF a JPEG optimizado.
 
 ${COLOR_BOLD}Argumentos:${COLOR_RESET}
   prefijo             Prefijo de los archivos de salida (defecto: imagen)
@@ -126,6 +127,27 @@ check_dependencies() {
   done
 }
 
+es_heic() {
+  local extension="${1##*.}"
+
+  extension="$(printf '%s' "$extension" | tr '[:upper:]' '[:lower:]')"
+
+  [[ "$extension" == "heic" || "$extension" == "heif" ]]
+}
+
+detectar_soporte_heic() {
+  if magick -list format 2>/dev/null |
+    awk '$1 == "HEIC" && $3 ~ /r/ { encontrado = 1 } END { exit !encontrado }'; then
+    HEIC_BACKEND="magick"
+  elif command -v sips >/dev/null 2>&1; then
+    HEIC_BACKEND="sips"
+  elif command -v heif-convert >/dev/null 2>&1; then
+    HEIC_BACKEND="heif-convert"
+  else
+    HEIC_BACKEND=""
+  fi
+}
+
 # ------------------------------------------
 # Validaciones
 # ------------------------------------------
@@ -158,6 +180,7 @@ esac
   error "No existe el directorio: $INPUT_DIR"
 
 check_dependencies
+detectar_soporte_heic
 
 mkdir -p "$OUTPUT_DIR" "$STATE_DIR"
 
@@ -188,6 +211,7 @@ omitidas=0
 while IFS= read -r -d '' archivo; do
 
   nombre_archivo="${archivo##*/}"
+  decodificado=""
 
   # Omitir archivos marcados
   if [[ "$nombre_archivo" == _* ]]; then
@@ -219,8 +243,37 @@ while IFS= read -r -d '' archivo; do
 
   original_size="$(file_size "$archivo")"
 
+  entrada="$archivo"
+
+  # Decodificar HEIC/HEIF si ImageMagick no puede leerlos directamente
+  if es_heic "$archivo"; then
+    [[ -n "$HEIC_BACKEND" ]] ||
+      error "No hay soporte para HEIC/HEIF; instala libheif o usa macOS con sips: $archivo"
+
+    if [[ "$HEIC_BACKEND" != "magick" ]]; then
+      decodificado="$OUTPUT_DIR/.${nuevo_nombre}.tmp.png"
+
+      [[ ! -e "$decodificado" ]] ||
+        error "Existe un temporal pendiente: $decodificado"
+
+      if [[ "$HEIC_BACKEND" == "sips" ]]; then
+        if ! sips -s format png "$archivo" --out "$decodificado" >/dev/null; then
+          rm -f "$decodificado"
+          error "Falló sips al convertir HEIC: $archivo"
+        fi
+      else
+        if ! heif-convert "$archivo" "$decodificado" >/dev/null; then
+          rm -f "$decodificado"
+          error "Falló heif-convert al convertir HEIC: $archivo"
+        fi
+      fi
+
+      entrada="$decodificado"
+    fi
+  fi
+
   # Convertir a JPEG
-  if ! magick "$archivo" \
+  if ! magick "$entrada" \
     -auto-orient \
     -background white \
     -alpha remove \
@@ -232,8 +285,11 @@ while IFS= read -r -d '' archivo; do
     "$temporal"; then
 
     rm -f "$temporal"
+    [[ -z "$decodificado" ]] || rm -f "$decodificado"
     error "Falló ImageMagick: $archivo"
   fi
+
+  [[ -z "$decodificado" ]] || rm -f "$decodificado"
 
   # Eliminar metadatos
   if ! exiftool \
@@ -306,7 +362,9 @@ done < <(
     \( -iname '*.jpg' \
     -o -iname '*.jpeg' \
     -o -iname '*.png' \
-    -o -iname '*.webp' \) \
+    -o -iname '*.webp' \
+    -o -iname '*.heic' \
+    -o -iname '*.heif' \) \
     -print0
 )
 

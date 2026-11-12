@@ -51,7 +51,9 @@ Ahora puedes ejecutarlos desde cualquier directorio. Para actualizar la instalac
 
 ## Optimizar imágenes: `imgopt.sh`
 
-Convierte archivos JPEG, PNG y WebP del directorio indicado a JPEG. Procesa solo los archivos directamente dentro del directorio (no busca en subdirectorios). Los resultados se guardan en `./optimized` por defecto y el original se renombra con `_` al inicio para marcarlo como procesado.
+Convierte archivos JPEG, PNG, WebP y HEIC/HEIF del directorio indicado a JPEG. Procesa solo los archivos directamente dentro del directorio (no busca en subdirectorios). Los resultados se guardan en `./optimized` por defecto y el original se renombra con `_` al inicio para marcarlo como procesado.
+
+Los HEIC/HEIF de iPhone se decodifican con ImageMagick si tiene soporte HEIC; en macOS se usa `sips` como alternativa y en Linux `heif-convert` (paquete `libheif`).
 
 ```sh
 imgopt.sh [prefijo] [directorio_entrada] [directorio_salida] [calidad]
