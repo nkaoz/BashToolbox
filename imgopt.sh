@@ -45,6 +45,27 @@ error() {
   exit 1
 }
 
+usage() {
+  cat <<EOF
+${COLOR_BOLD}Uso:${COLOR_RESET} imgopt.sh [prefijo] [directorio_entrada] [directorio_salida] [calidad]
+
+Convierte imágenes JPG, PNG y WebP a JPEG optimizado.
+
+${COLOR_BOLD}Argumentos:${COLOR_RESET}
+  prefijo             Prefijo de los archivos de salida (defecto: imagen)
+  directorio_entrada  Carpeta con las imágenes (defecto: .)
+  directorio_salida   Carpeta destino (defecto: ./optimized)
+  calidad             Calidad JPEG entre 1 y 100 (defecto: 80)
+
+${COLOR_BOLD}Opciones:${COLOR_RESET}
+  -h, --help          Muestra esta ayuda
+
+${COLOR_BOLD}Ejemplos:${COLOR_RESET}
+  imgopt.sh viaje ./fotos ./fotos-optimizadas 85
+  imgopt.sh viaje
+EOF
+}
+
 color_nivel() {
   local porcentaje="$1"
 
@@ -108,6 +129,21 @@ check_dependencies() {
 # ------------------------------------------
 # Validaciones
 # ------------------------------------------
+
+if [[ $# -eq 0 ]]; then
+  usage
+  exit 0
+fi
+
+case "$1" in
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  -*)
+    error "Opción desconocida: $1"
+    ;;
+esac
 
 [[ "$PREFIX" =~ ^[a-zA-Z0-9_-]+$ ]] ||
   error "El prefijo solo admite letras, números, _ y -"

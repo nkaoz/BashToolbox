@@ -57,6 +57,8 @@ Convierte archivos JPEG, PNG y WebP del directorio indicado a JPEG. Procesa solo
 imgopt.sh [prefijo] [directorio_entrada] [directorio_salida] [calidad]
 ```
 
+Ejecutar el comando sin argumentos, o con `-h`/`--help`, muestra la ayuda.
+
 - `prefijo`: prefijo del nombre de salida; por defecto, `imagen`.
 - `directorio_entrada`: carpeta de imágenes; por defecto, el directorio actual.
 - `directorio_salida`: carpeta para los JPEG generados; por defecto, `./optimized`.
