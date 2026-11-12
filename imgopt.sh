@@ -14,6 +14,9 @@ QUALITY="${4:-80}"
 
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/imgopt"
 HEIC_BACKEND=""
+FORMAT="jpg"
+EXTENSION="jpg"
+FORMAT_LABEL="JPG"
 
 # ------------------------------------------
 # Colores (solo si la salida es una terminal)
@@ -50,7 +53,9 @@ usage() {
   cat <<EOF
 ${COLOR_BOLD}Uso:${COLOR_RESET} imgopt.sh [prefijo] [directorio_entrada] [directorio_salida] [calidad]
 
-Convierte imágenes JPG, PNG, WebP y HEIC/HEIF a JPEG optimizado.
+Convierte imágenes JPG, PNG, WebP y HEIC/HEIF a JPEG o WebP optimizado.
+
+Al iniciar pregunta el formato de salida. Si no hay respuesta en 10 segundos, usa JPG.
 
 ${COLOR_BOLD}Argumentos:${COLOR_RESET}
   prefijo             Prefijo de los archivos de salida (defecto: imagen)
@@ -95,6 +100,39 @@ etiqueta_nivel() {
   fi
 }
 
+elegir_formato() {
+  local respuesta
+
+  # Sin terminal interactiva no se puede preguntar: JPG por defecto
+  [[ -t 0 ]] || return 0
+
+  printf '%sFormato de salida%s [JPG/WEBP] (JPG en 10s): ' \
+    "$COLOR_BOLD" "$COLOR_RESET"
+
+  if IFS= read -r -t 10 respuesta; then
+    respuesta="$(printf '%s' "$respuesta" | tr '[:upper:]' '[:lower:]')"
+
+    case "$respuesta" in
+      '' | jpg | jpeg)
+        FORMAT="jpg"
+        EXTENSION="jpg"
+        FORMAT_LABEL="JPG"
+        ;;
+      webp)
+        FORMAT="webp"
+        EXTENSION="webp"
+        FORMAT_LABEL="WEBP"
+        ;;
+      *)
+        printf '\n%sOpción no válida; se usará JPG.%s\n' \
+          "$COLOR_YELLOW" "$COLOR_RESET"
+        ;;
+    esac
+  else
+    printf '\n%sSin respuesta; se usará JPG.%s\n' "$COLOR_DIM" "$COLOR_RESET"
+  fi
+}
+
 file_size() {
   local file="$1"
 
@@ -121,7 +159,7 @@ human_size() {
 check_dependencies() {
   local cmd
 
-  for cmd in magick exiftool jpegoptim; do
+  for cmd in magick exiftool; do
     command -v "$cmd" >/dev/null 2>&1 ||
       error "Falta instalar '$cmd'"
   done
@@ -201,6 +239,13 @@ fi
 [[ "$contador" =~ ^[0-9]+$ ]] ||
   error "Contador inválido"
 
+elegir_formato
+
+if [[ "$FORMAT" == "jpg" ]]; then
+  command -v jpegoptim >/dev/null 2>&1 ||
+    error "Falta instalar 'jpegoptim'"
+fi
+
 # ------------------------------------------
 # Procesamiento
 # ------------------------------------------
@@ -223,7 +268,7 @@ while IFS= read -r -d '' archivo; do
   # Evitar sobrescritura
   while :; do
     printf -v nuevo_nombre \
-      '%s-%02d.jpg' "$PREFIX" "$contador"
+      '%s-%02d.%s' "$PREFIX" "$contador" "$EXTENSION"
 
     destino="$OUTPUT_DIR/$nuevo_nombre"
 
@@ -232,7 +277,7 @@ while IFS= read -r -d '' archivo; do
     contador=$((contador + 1))
   done
 
-  temporal="$OUTPUT_DIR/.${nuevo_nombre}.tmp.jpg"
+  temporal="$OUTPUT_DIR/.${nuevo_nombre}.tmp.${EXTENSION}"
 
   # No reutilizar un temporal existente
   [[ ! -e "$temporal" ]] ||
@@ -272,15 +317,26 @@ while IFS= read -r -d '' archivo; do
     fi
   fi
 
-  # Convertir a JPEG
+  # Opciones según el formato de salida
+  opciones_formato=()
+
+  if [[ "$FORMAT" == "webp" ]]; then
+    opciones_formato=(-define webp:method=6)
+  else
+    opciones_formato=(
+      -background white
+      -alpha remove
+      -alpha off
+      -sampling-factor 4:2:0
+      -interlace Plane
+    )
+  fi
+
+  # Convertir al formato elegido
   if ! magick "$entrada" \
     -auto-orient \
-    -background white \
-    -alpha remove \
-    -alpha off \
+    "${opciones_formato[@]}" \
     -strip \
-    -sampling-factor 4:2:0 \
-    -interlace Plane \
     -quality "$QUALITY" \
     "$temporal"; then
 
@@ -301,15 +357,17 @@ while IFS= read -r -d '' archivo; do
     error "Falló ExifTool: $archivo"
   fi
 
-  # Optimizar JPEG
-  if ! jpegoptim \
-    --strip-all \
-    --max="$QUALITY" \
-    --all-progressive \
-    "$temporal" >/dev/null; then
+  # Optimizar JPEG (WebP ya se comprime con ImageMagick)
+  if [[ "$FORMAT" == "jpg" ]]; then
+    if ! jpegoptim \
+      --strip-all \
+      --max="$QUALITY" \
+      --all-progressive \
+      "$temporal" >/dev/null; then
 
-    rm -f "$temporal"
-    error "Falló jpegoptim: $archivo"
+      rm -f "$temporal"
+      error "Falló jpegoptim: $archivo"
+    fi
   fi
 
   [[ -s "$temporal" ]] ||
@@ -376,6 +434,6 @@ printf '\n%s\n' '========================================'
 printf '%s✓ Proceso terminado%s\n' "$COLOR_BOLD$COLOR_GREEN" "$COLOR_RESET"
 printf 'Procesadas: %s%s%s\n' "$COLOR_GREEN" "$procesadas" "$COLOR_RESET"
 printf 'Omitidas:   %s%s%s\n' "$COLOR_YELLOW" "$omitidas" "$COLOR_RESET"
-printf 'Formato:    JPG\n'
+printf 'Formato:    %s\n' "$FORMAT_LABEL"
 printf 'Destino:    %s\n' "$OUTPUT_DIR"
 printf '%s\n' '========================================'

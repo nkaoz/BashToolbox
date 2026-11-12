@@ -1,6 +1,6 @@
 # imgopt.sh
 
-Convierte archivos JPEG, PNG, WebP y HEIC/HEIF del directorio indicado a JPEG optimizado. Procesa solo los archivos directamente dentro del directorio (no busca en subdirectorios). Los resultados se guardan en `./optimized` por defecto y el original se renombra con `_` al inicio para marcarlo como procesado.
+Convierte archivos JPEG, PNG, WebP y HEIC/HEIF del directorio indicado a JPEG o WebP optimizado. Procesa solo los archivos directamente dentro del directorio (no busca en subdirectorios). Los resultados se guardan en `./optimized` por defecto y el original se renombra con `_` al inicio para marcarlo como procesado.
 
 ## Uso
 
@@ -10,11 +10,20 @@ imgopt.sh [prefijo] [directorio_entrada] [directorio_salida] [calidad]
 
 Ejecutar el comando sin argumentos, o con `-h`/`--help`, muestra la ayuda.
 
+## Formato de salida
+
+Al iniciar, el script pregunta si se desea generar **JPG** o **WEBP**. Si no hay respuesta en 10 segundos, usa JPG automáticamente.
+
+Cuando no hay una terminal interactiva (por ejemplo, al redirigir la salida), también se usa JPG sin preguntar.
+
+- **JPG**: se aplana la transparencia sobre fondo blanco y se optimiza con `jpegoptim`.
+- **WEBP**: se conserva la transparencia y se comprime con ImageMagick usando el método más lento y de mayor calidad.
+
 ### Argumentos
 
 - `prefijo`: prefijo del nombre de salida; por defecto, `imagen`.
 - `directorio_entrada`: carpeta de imágenes; por defecto, el directorio actual.
-- `directorio_salida`: carpeta para los JPEG generados; por defecto, `./optimized`.
+- `directorio_salida`: carpeta para los archivos generados; por defecto, `./optimized`.
 - `calidad`: valor entre 1 y 100; por defecto, `80`.
 
 ## Ejemplos
@@ -24,7 +33,7 @@ imgopt.sh
 imgopt.sh viaje ./fotos ./fotos-optimizadas 85
 ```
 
-Los nombres generados llevan un contador (`viaje-01.jpg`, `viaje-02.jpg`, etc.). El contador se guarda en `${XDG_STATE_HOME:-$HOME/.local/state}/imgopt`.
+Los nombres generados llevan un contador (`viaje-01.jpg`, `viaje-02.webp`, etc.). El contador se guarda en `${XDG_STATE_HOME:-$HOME/.local/state}/imgopt`.
 
 Como los originales se renombran con `_` al inicio, una segunda ejecución los omite y no se procesan dos veces.
 
@@ -53,7 +62,7 @@ Si no hay ningún backend disponible, el script muestra un error y no modifica e
 
 - `magick` (ImageMagick 7).
 - `exiftool`.
-- `jpegoptim`.
+- `jpegoptim`, necesario solo al generar JPG.
 - Opcionalmente, soporte HEIC en ImageMagick, `sips` o `heif-convert`.
 
 En macOS se pueden instalar las dependencias con MacPorts:

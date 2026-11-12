@@ -6,7 +6,7 @@ Colección de scripts Bash para automatizar tareas cotidianas en macOS y Linux. 
 
 | Comando | Descripción | Documentación |
 | --- | --- | --- |
-| `imgopt.sh` | Convierte y optimiza imágenes a JPEG. | [imgopt.sh.md](imgopt.sh.md) |
+| `imgopt.sh` | Convierte y optimiza imágenes a JPEG o WebP. | [imgopt.sh.md](imgopt.sh.md) |
 | `slugify.sh` | Convierte nombres de archivo a formato slug. | [slugify.sh.md](slugify.sh.md) |
 
 ## Requisitos
