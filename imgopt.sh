@@ -7,16 +7,18 @@ set -euo pipefail
 # Compatible: macOS / Linux
 # ==========================================
 
-PREFIX="${1:-imagen}"
-INPUT_DIR="${2:-.}"
-OUTPUT_DIR="${3:-./optimized}"
-QUALITY="${4:-80}"
+PREFIX="imagen"
+INPUT_DIR="."
+OUTPUT_DIR="./optimized"
+QUALITY="80"
 
+COMMAND_NAME="$(basename "$0")"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/imgopt"
 HEIC_BACKEND=""
 FORMAT="jpg"
 EXTENSION="jpg"
 FORMAT_LABEL="JPG"
+FORMAT_OPT=""
 
 # ------------------------------------------
 # Colores (solo si la salida es una terminal)
@@ -51,24 +53,24 @@ error() {
 
 usage() {
   cat <<EOF
-${COLOR_BOLD}Uso:${COLOR_RESET} imgopt.sh [prefijo] [directorio_entrada] [directorio_salida] [calidad]
+${COLOR_BOLD}Uso:${COLOR_RESET} ${COMMAND_NAME} [opciones]
 
-Convierte imágenes JPG, PNG, WebP y HEIC/HEIF a JPEG o WebP optimizado.
+Convierte imágenes JPG, PNG, WebP y HEIC/HEIF a JPG o WebP optimizado.
 
-Al iniciar pregunta el formato de salida. Si no hay respuesta en 10 segundos, usa JPG.
-
-${COLOR_BOLD}Argumentos:${COLOR_RESET}
-  prefijo             Prefijo de los archivos de salida (defecto: imagen)
-  directorio_entrada  Carpeta con las imágenes (defecto: .)
-  directorio_salida   Carpeta destino (defecto: ./optimized)
-  calidad             Calidad JPEG entre 1 y 100 (defecto: 80)
+Al iniciar pregunta el formato de salida si no se usa --format.
+Si no hay respuesta en 10 segundos, usa JPG.
 
 ${COLOR_BOLD}Opciones:${COLOR_RESET}
-  -h, --help          Muestra esta ayuda
+  -p, --prefix TEXTO    Prefijo de los archivos de salida (defecto: imagen)
+  -i, --input DIR       Carpeta con las imágenes (defecto: .)
+  -o, --output DIR      Carpeta destino (defecto: ./optimized)
+  -q, --quality N       Calidad de 1 a 100 (defecto: 80)
+  -f, --format FORMATO  Formato de salida: jpg o webp (si se omite, pregunta)
+  -h, --help            Muestra esta ayuda
 
 ${COLOR_BOLD}Ejemplos:${COLOR_RESET}
-  imgopt.sh viaje ./fotos ./fotos-optimizadas 85
-  imgopt.sh viaje
+  ${COMMAND_NAME} --prefix viaje --input ./fotos --output ./fotos-optimizadas --quality 85
+  ${COMMAND_NAME} --format webp --prefix viaje
 EOF
 }
 
@@ -195,15 +197,59 @@ if [[ $# -eq 0 ]]; then
   exit 0
 fi
 
-case "$1" in
-  -h | --help)
-    usage
-    exit 0
-    ;;
-  -*)
-    error "Opción desconocida: $1"
-    ;;
-esac
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -p | --prefix)
+      [[ $# -ge 2 ]] || error "Falta el valor para $1"
+      PREFIX="$2"
+      shift 2
+      ;;
+    -i | --input)
+      [[ $# -ge 2 ]] || error "Falta el valor para $1"
+      INPUT_DIR="$2"
+      shift 2
+      ;;
+    -o | --output)
+      [[ $# -ge 2 ]] || error "Falta el valor para $1"
+      OUTPUT_DIR="$2"
+      shift 2
+      ;;
+    -q | --quality)
+      [[ $# -ge 2 ]] || error "Falta el valor para $1"
+      QUALITY="$2"
+      shift 2
+      ;;
+    -f | --format)
+      [[ $# -ge 2 ]] || error "Falta el valor para $1"
+      FORMAT_OPT="$2"
+      shift 2
+      ;;
+    -*)
+      error "Opción desconocida: $1 (usa --help para ver las opciones)"
+      ;;
+    *)
+      error "Argumento no reconocido: $1 (usa --help para ver las opciones)"
+      ;;
+  esac
+done
+
+if [[ -n "$FORMAT_OPT" ]]; then
+  case "$(printf '%s' "$FORMAT_OPT" | tr '[:upper:]' '[:lower:]')" in
+    jpg | jpeg) ;;
+    webp)
+      FORMAT="webp"
+      EXTENSION="webp"
+      FORMAT_LABEL="WEBP"
+      ;;
+    *)
+      error "Formato no válido: $FORMAT_OPT (usa jpg o webp)"
+      ;;
+  esac
+fi
 
 [[ "$PREFIX" =~ ^[a-zA-Z0-9_-]+$ ]] ||
   error "El prefijo solo admite letras, números, _ y -"
@@ -239,7 +285,9 @@ fi
 [[ "$contador" =~ ^[0-9]+$ ]] ||
   error "Contador inválido"
 
-elegir_formato
+if [[ -z "$FORMAT_OPT" ]]; then
+  elegir_formato
+fi
 
 if [[ "$FORMAT" == "jpg" ]]; then
   command -v jpegoptim >/dev/null 2>&1 ||

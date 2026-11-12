@@ -5,32 +5,35 @@ Convierte archivos JPEG, PNG, WebP y HEIC/HEIF del directorio indicado a JPEG o 
 ## Uso
 
 ```sh
-imgopt.sh [prefijo] [directorio_entrada] [directorio_salida] [calidad]
+imgopt.sh [opciones]
 ```
 
-Ejecutar el comando sin argumentos, o con `-h`/`--help`, muestra la ayuda.
+Ejecutar el comando sin opciones, o con `-h`/`--help`, muestra la ayuda.
+
+## Opciones
+
+- `-p`, `--prefix TEXTO`: prefijo del nombre de salida; por defecto, `imagen`.
+- `-i`, `--input DIR`: carpeta de imágenes; por defecto, el directorio actual.
+- `-o`, `--output DIR`: carpeta para los archivos generados; por defecto, `./optimized`.
+- `-q`, `--quality N`: calidad entre 1 y 100; por defecto, `80`.
+- `-f`, `--format FORMATO`: formato de salida, `jpg` o `webp`. Si se omite, el script lo pregunta.
+- `-h`, `--help`: muestra la ayuda.
 
 ## Formato de salida
 
-Al iniciar, el script pregunta si se desea generar **JPG** o **WEBP**. Si no hay respuesta en 10 segundos, usa JPG automáticamente.
+Si no se usa `--format`, el script pregunta si se desea generar **JPG** o **WEBP**. Si no hay respuesta en 10 segundos, usa JPG automáticamente.
 
 Cuando no hay una terminal interactiva (por ejemplo, al redirigir la salida), también se usa JPG sin preguntar.
 
 - **JPG**: se aplana la transparencia sobre fondo blanco y se optimiza con `jpegoptim`.
 - **WEBP**: se conserva la transparencia y se comprime con ImageMagick usando el método más lento y de mayor calidad.
 
-### Argumentos
-
-- `prefijo`: prefijo del nombre de salida; por defecto, `imagen`.
-- `directorio_entrada`: carpeta de imágenes; por defecto, el directorio actual.
-- `directorio_salida`: carpeta para los archivos generados; por defecto, `./optimized`.
-- `calidad`: valor entre 1 y 100; por defecto, `80`.
-
 ## Ejemplos
 
 ```sh
 imgopt.sh
-imgopt.sh viaje ./fotos ./fotos-optimizadas 85
+imgopt.sh --prefix viaje --input ./fotos --output ./fotos-optimizadas --quality 85
+imgopt.sh --format webp --prefix viaje
 ```
 
 Los nombres generados llevan un contador (`viaje-01.jpg`, `viaje-02.webp`, etc.). El contador se guarda en `${XDG_STATE_HOME:-$HOME/.local/state}/imgopt`.
