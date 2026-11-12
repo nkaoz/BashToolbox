@@ -15,12 +15,62 @@ QUALITY="${4:-80}"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/imgopt"
 
 # ------------------------------------------
+# Colores (solo si la salida es una terminal)
+# ------------------------------------------
+
+if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != "dumb" ]]; then
+  COLOR_RESET=$'\033[0m'
+  COLOR_BOLD=$'\033[1m'
+  COLOR_DIM=$'\033[2m'
+  COLOR_RED=$'\033[31m'
+  COLOR_GREEN=$'\033[32m'
+  COLOR_YELLOW=$'\033[33m'
+  COLOR_CYAN=$'\033[36m'
+else
+  COLOR_RESET=''
+  COLOR_BOLD=''
+  COLOR_DIM=''
+  COLOR_RED=''
+  COLOR_GREEN=''
+  COLOR_YELLOW=''
+  COLOR_CYAN=''
+fi
+
+# ------------------------------------------
 # Utilidades
 # ------------------------------------------
 
 error() {
-  printf 'Error: %s\n' "$*" >&2
+  printf '%sError: %s%s\n' "$COLOR_RED" "$*" "$COLOR_RESET" >&2
   exit 1
+}
+
+color_nivel() {
+  local porcentaje="$1"
+
+  if ((porcentaje >= 50)); then
+    printf '%s' "$COLOR_GREEN"
+  elif ((porcentaje >= 25)); then
+    printf '%s' "$COLOR_CYAN"
+  elif ((porcentaje >= 10)); then
+    printf '%s' "$COLOR_YELLOW"
+  else
+    printf '%s' "$COLOR_RED"
+  fi
+}
+
+etiqueta_nivel() {
+  local porcentaje="$1"
+
+  if ((porcentaje >= 50)); then
+    printf 'Excelente'
+  elif ((porcentaje >= 25)); then
+    printf 'Buena'
+  elif ((porcentaje >= 10)); then
+    printf 'Moderada'
+  else
+    printf 'Baja'
+  fi
 }
 
 file_size() {
@@ -105,7 +155,7 @@ while IFS= read -r -d '' archivo; do
 
   # Omitir archivos marcados
   if [[ "$nombre_archivo" == _* ]]; then
-    printf 'Omitiendo: %s\n' "$archivo"
+    printf '%sOmitiendo: %s%s\n' "$COLOR_DIM" "$archivo" "$COLOR_RESET"
     omitidas=$((omitidas + 1))
     continue
   fi
@@ -129,7 +179,7 @@ while IFS= read -r -d '' archivo; do
     error "Existe un temporal pendiente: $temporal"
 
   printf '\n%s\n' '----------------------------------------'
-  printf 'Procesando: %s\n' "$archivo"
+  printf '%sProcesando:%s %s\n' "$COLOR_BOLD$COLOR_CYAN" "$COLOR_RESET" "$archivo"
 
   original_size="$(file_size "$archivo")"
 
@@ -201,10 +251,17 @@ while IFS= read -r -d '' archivo; do
 
   procesadas=$((procesadas + 1))
 
-  printf 'Archivo:    %s\n' "$nuevo_nombre"
-  printf 'Original:   %s\n' "$(human_size "$original_size")"
-  printf 'Optimizado: %s\n' "$(human_size "$final_size")"
-  printf 'Reducción:  %s%%\n' "$porcentaje"
+  color="$(color_nivel "$porcentaje")"
+  nivel="$(etiqueta_nivel "$porcentaje")"
+
+  printf '%sArchivo:%s    %s\n' "$COLOR_DIM" "$COLOR_RESET" "$nuevo_nombre"
+  printf '%sOriginal:%s   %s\n' "$COLOR_DIM" "$COLOR_RESET" "$(human_size "$original_size")"
+  printf '%sOptimizado:%s %s%s%s\n' \
+    "$COLOR_DIM" "$COLOR_RESET" "$color" "$(human_size "$final_size")" "$COLOR_RESET"
+  printf '%sReducción:%s  %s%s%%%s\n' \
+    "$COLOR_DIM" "$COLOR_RESET" "$color" "$porcentaje" "$COLOR_RESET"
+  printf '%sNivel:%s      %s%s%s%s\n' \
+    "$COLOR_DIM" "$COLOR_RESET" "$COLOR_BOLD" "$color" "$nivel" "$COLOR_RESET"
 
 done < <(
   find "$INPUT_DIR" \
@@ -222,9 +279,9 @@ done < <(
 # ------------------------------------------
 
 printf '\n%s\n' '========================================'
-printf '✓ Proceso terminado\n'
-printf 'Procesadas: %s\n' "$procesadas"
-printf 'Omitidas:   %s\n' "$omitidas"
+printf '%s✓ Proceso terminado%s\n' "$COLOR_BOLD$COLOR_GREEN" "$COLOR_RESET"
+printf 'Procesadas: %s%s%s\n' "$COLOR_GREEN" "$procesadas" "$COLOR_RESET"
+printf 'Omitidas:   %s%s%s\n' "$COLOR_YELLOW" "$omitidas" "$COLOR_RESET"
 printf 'Formato:    JPG\n'
 printf 'Destino:    %s\n' "$OUTPUT_DIR"
 printf '%s\n' '========================================'

@@ -71,6 +71,15 @@ imgopt.sh viaje ./fotos ./fotos-optimizadas 85
 
 Los nombres generados llevan un contador (`viaje-01.jpg`, `viaje-02.jpg`, etc.). El contador se guarda en `${XDG_STATE_HOME:-$HOME/.local/state}/imgopt`.
 
+Los resultados se muestran en color según el nivel de optimización alcanzado:
+
+- **Excelente** (verde): reducción del 50 % o más.
+- **Buena** (cian): reducción entre 25 % y 49 %.
+- **Moderada** (amarillo): reducción entre 10 % y 24 %.
+- **Baja** (rojo): reducción menor al 10 %.
+
+Los colores solo se aplican cuando la salida es una terminal interactiva. Define `NO_COLOR=1` para desactivarlos.
+
 ## Convertir nombres a slug: `slugify.sh`
 
 Por defecto, muestra el nombre resultante sin modificar el archivo. Con `-r` realiza el renombrado; `-n` muestra una simulación del renombrado.
